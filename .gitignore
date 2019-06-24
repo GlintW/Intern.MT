@@ -102,3 +102,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# ide
+.idea/
+.vscode/
+*.iml
+
+# data
+*.csv
+*.xls
+*.xlsx
+*.pkl
