@@ -1,0 +1,9 @@
+matplotlib是python绘图库,  提供一整套和matlab类似的API.
+
+文档在这里:
+http://old.sebug.net/paper/books/scipydoc/matplotlib_intro.html
+
+可以无脑抄的代码在这里:
+http://matplotlib.org/gallery.html
+
+例子见tf_3rd_matplotlib.py
