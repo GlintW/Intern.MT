@@ -1,0 +1,46 @@
+import tensorflow as tf
+
+由于python运行性能较低, 因此tensorflow的设计思想是把计算部分都放到python外, 使用类似numpy这种C代码编译好的外部包进行计算. 也即是python把输入传递给外部, 外部计算出输出后传回python. 这个传递和环境切换的时间被称作overhead cost.
+
+在实际工作中, 可能存在大量步骤都是简单的矩阵计算, 直接python计算的成本未必会比多次overhead cost要高, 为了减少overhead cost, tensorflow使用了图(graph)的想法, 通过把整个图都定义好, 再把整个图都传递到python外执行的方式来运行.
+
+因此, tensorflow把所有的值都当成tensor对象, 运算都当成操作(op), tf不会像顺序流程一样执行操作, 而是将所有操作放入图(graph)中, 以图中的结点作为操作, 然后将图交给tf的Session进行控制.
+
+具体体现在代码上, 即是:
+1. 通过变量维护值, 使用tensor表示数据
+2. 计算的任务被称作图
+3. 在会话中执行图
+4. 通过feed传递值
+
+
+变量
+a = tf.Variable(tf.ones[3, 3])
+b = tf.Variable(tf.zeros[3, 3])
+c = tf.Variable(10)
+d = tf.Variable(20)
+e = tf.Variable(20)
+
+常量
+f = tf.constant(10)
+
+占位符, 在Session指过的时候, 通过feed_dict传输实际数据
+g = tf.placeholder(tf.float32)
+
+定义Session
+sess = tf.Session()
+
+初始化全部变量
+sess.run(tf.global_variables_initializer())
+
+简单计算
+加法
+add = tf.add(5, 2)  # 7
+减法
+sub = tf.subtract(10, 4) # 6
+乘法
+mul = tf.multiply(2, 5)  # 10
+除法
+div = tf.div(10, 5) # 2
+sess.run(add, mul)
+
+

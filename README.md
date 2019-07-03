@@ -1,2 +1,2 @@
 # Intern.MT
-machine learning 
+Let us do something by DATA!
