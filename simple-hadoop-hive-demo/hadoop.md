@@ -287,6 +287,9 @@ cp -arf hive-hbase-handler-3.1.1.jar /usr/local/hbase/lib/
 
 * 使用  
 
+管理页面
+> http://192.168.3.234:60010/master-status
+
 在hive中建立结果表
 ```
 hive> CREATE TABLE word_count_result(key string, value int) STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' WITH SERDEPROPERTIES ("hbase.columns.mapping" = ":key,cf1:val") TBLPROPERTIES ("hbase.table.name" = "word_count_result", "hbase.mapred.output.outputtable" = "word_count_result");
