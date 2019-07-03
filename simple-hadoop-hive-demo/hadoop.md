@@ -85,9 +85,10 @@ winutils的版本需要和下载的hadoop版本一致
 </configuration>
 ```
 
-> etc/hadoop/hadoop-env.cmd
+> etc/hadoop/hadoop-env.cmd  
+> 修改`JAVA_HOME`， 例如：
 ```
-修改 "set JAVA_HOME=%JAVA_HOME%"
+export JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-1.8.0.212.b04-0.el7_6.x86_64/jre/"
 ```
 
 #### 2. 启动hadoop
@@ -178,22 +179,7 @@ OK
 Time taken: 0.803 seconds
 ```
 
-------
-
-#### 4. 完整bash_profile示例
-```
-export HADOOP_HOME="/usr/local/hadoop"
-export HIVE_HOME="/usr/local/hive"
-export DERBY_HOME="/usr/local/derby"
-export CLASSPATH=$CLASSPATH:${HADOOP_HOME}/lib/*:.
-export CLASSPATH=$CLASSPATH:${HIVE_HOME}/lib/*:.
-export CLASSPATH=$CLASSPATH:${DERBY_HOME}/lib/derby.jar:$DERBY_HOME/lib/derbytools.jar
-PATH=$JAVA_HOME/bin:${HADOOP_HOME}/bin:${HIVE_HOME}/bin:${DERBY_HOME}/bin:$PATH:$HOME/.local/bin:$HOME/bin
-```
-
-------
-
-#### 5. wordcount使用HQL
+#### 4. wordcount使用HQL
 ```
 $ cat 1.txt 2.txt 3.txt 
 pobby is a glint girl.
@@ -258,3 +244,112 @@ glint   1
 cute    1
 Time taken: 49.149 seconds, Fetched: 9 row(s)
 ```
+
+#### 5. 结果存到HBase
+
+* 下载  
+> http://hbase.apache.org/downloads.html  
+
+配置环境变量 `HBASE_HOME`  
+path中增加 `%HBASE_HOME%\bin` 
+
+* 配置修改
+> hbase-site.xml  
+```xml
+<configuration>
+    <property>
+        <name>hbase.rootdir</name>
+        <value>hdfs://localhost:9000/hbase</value>
+    </property>
+    <property>
+        <name>hbase.cluster.distributed</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hbase.zookeeper.property.dataDir</name>
+        <value>/usr/local/hbase/data</value>
+    </property>
+    <property>
+        <name>hbase.master.info.port</name>
+        <value>60010</value>
+    </property>
+    <property>
+        <name>hbase.unsafe.stream.capability.enforce</name>
+        <value>false</value>
+    </property>
+</configuration>
+```
+
+HIVE与HBASE的通信通过hive-hbase-handler-*.jar实现  
+```
+cp -arf hive-hbase-handler-3.1.1.jar /usr/local/hbase/lib/
+```
+
+* 使用  
+
+在hive中建立结果表
+```
+hive> CREATE TABLE word_count_result(key string, value int) STORED BY 'org.apache.hadoop.hive.hbase.HBaseStorageHandler' WITH SERDEPROPERTIES ("hbase.columns.mapping" = ":key,cf1:val") TBLPROPERTIES ("hbase.table.name" = "word_count_result", "hbase.mapred.output.outputtable" = "word_count_result");
+```
+在hive结果表中插入mapred数据
+```
+hive> insert overwrite table word_count_result SELECT word, count(1) as cnts FROM (select replace(word, '.', '') as word from (SELECT explode(split(rowdata, ' ')) AS word FROM wordcount) t_tmp) t_tmp2 GROUP BY word ORDER BY cnts desc;
+```
+
+在hbase中查看数据
+```
+hbase(main):031:0> list
+TABLE                                                                                                                                                                      
+word_count_result                                                                                                                                                          
+2 row(s)
+Took 0.0073 seconds                                                                                                                                                        
+=> ["word_count_result"]
+
+hbase(main):030:0> describe 'word_count_result'
+Table word_count_result is ENABLED                                                                                                                                         
+word_count_result                                                                                                                                                          
+COLUMN FAMILIES DESCRIPTION                                                                                                                                                
+{NAME => 'cf1', VERSIONS => '1', EVICT_BLOCKS_ON_CLOSE => 'false', NEW_VERSION_BEHAVIOR => 'false', KEEP_DELETED_CELLS => 'FALSE', CACHE_DATA_ON_WRITE => 'false', DATA_BLO
+CK_ENCODING => 'NONE', TTL => 'FOREVER', MIN_VERSIONS => '0', REPLICATION_SCOPE => '0', BLOOMFILTER => 'ROW', CACHE_INDEX_ON_WRITE => 'false', IN_MEMORY => 'false', CACHE_
+BLOOMS_ON_WRITE => 'false', PREFETCH_BLOCKS_ON_OPEN => 'false', COMPRESSION => 'NONE', BLOCKCACHE => 'true', BLOCKSIZE => '65536', METADATA => {'CACHE_DATA_IN_L1' => 'fals
+e'}}                                                                                                                                                                       
+
+1 row(s)
+
+QUOTAS                                                                                                                                                                     
+0 row(s)
+Took 0.0604 seconds
+
+hbase(main):035:0> t.scan
+ROW                                         COLUMN+CELL                                                                                                                    
+ a                                          column=cf1:val, timestamp=1562120408200, value=2                                                                               
+ cute                                       column=cf1:val, timestamp=1562120408200, value=1                                                                               
+ girl                                       column=cf1:val, timestamp=1562120408200, value=2                                                                               
+ glint                                      column=cf1:val, timestamp=1562120408200, value=1                                                                               
+ is                                         column=cf1:val, timestamp=1562120408200, value=3                                                                               
+ lovely                                     column=cf1:val, timestamp=1562120408200, value=1                                                                               
+ my                                         column=cf1:val, timestamp=1562120408200, value=1                                                                               
+ pobby                                      column=cf1:val, timestamp=1562120408200, value=3                                                                               
+ sister                                     column=cf1:val, timestamp=1562120408200, value=1                                                                               
+9 row(s)
+Took 0.0187 seconds
+
+```
+
+------
+
+#### 6. 完整bash_profile示例
+```
+export HADOOP_HOME="/usr/local/hadoop"
+export HIVE_HOME="/usr/local/hive"
+export DERBY_HOME="/usr/local/derby"
+export HBASE_HOME="/usr/local/hbase"
+export CLASSPATH=$CLASSPATH:${HADOOP_HOME}/lib/*:.
+export CLASSPATH=$CLASSPATH:${HIVE_HOME}/lib/*:.
+export CLASSPATH=$CLASSPATH:${DERBY_HOME}/lib/derby.jar:$DERBY_HOME/lib/derbytools.jar
+PATH=${JAVA_HOME}/bin:${HADOOP_HOME}/bin:${HIVE_HOME}/bin:${DERBY_HOME}/bin:${HBASE_HOME}/bin:$PATH:$HOME/.local/bin:$HOME/bin
+export PATH
+```
+
+------
+
